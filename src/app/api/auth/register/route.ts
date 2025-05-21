@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerUser } from '@/lib/auth';
 import { getRequestContext } from '@/utils/request-utils';
+import { validatePasswordStrength } from '@/utils/password-utils';
 import { z } from 'zod';
 
 // 유효성 검사 스키마
@@ -49,6 +50,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
+
+    // 비밀번호 강도 검증
+    const passwordValidation = validatePasswordStrength(body.password);
+    if (!passwordValidation.isValid) {
+      return NextResponse.json({ 
+        error: "Password does not meet security requirements", 
+        details: passwordValidation.errors 
+      }, { status: 400 });
     }
 
     // 요청 컨텍스트 정보 가져오기

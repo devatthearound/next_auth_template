@@ -1,8 +1,8 @@
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 import { JwtPayload, signAccessToken, signRefreshToken, verifyToken } from './jwt';
-import { User, UserType } from '@prisma/client';
 import { logUserActivity } from './activity';
+import { User, UserType } from '@/generated/prisma';
 
 // 비밀번호 해싱
 export async function hashPassword(password: string): Promise<string> {
@@ -159,13 +159,14 @@ export async function loginUser(credentials: {
     isPhoneVerified: user.isPhoneVerified,
   };
 
-  const accessToken = signAccessToken(payload);
-  const refreshToken = signRefreshToken(payload);
+  // 비동기 함수에 await 추가
+  const accessToken = await signAccessToken(payload);
+  const refreshToken = await signRefreshToken(payload);
 
   // 리프레시 토큰 저장
   await prisma.user.update({
     where: { id: user.id },
-    data: { refreshToken },
+    data: { refreshToken }, // refreshToken이 이제 문자열입니다
   });
 
   // 로그인 성공 로그
@@ -181,7 +182,7 @@ export async function loginUser(credentials: {
 
 // 토큰으로 사용자 정보 가져오기
 export async function getUserFromToken(token: string): Promise<User | null> {
-  const payload = verifyToken(token);
+  const payload = await verifyToken(token);
   if (!payload) return null;
 
   return prisma.user.findFirst({
@@ -198,7 +199,7 @@ export async function getUserFromToken(token: string): Promise<User | null> {
 
 // 토큰 갱신
 export async function refreshAccessToken(token: string, context?: any): Promise<string | null> {
-  const payload = verifyToken(token);
+  const payload = await verifyToken(token);
   if (!payload) return null;
 
   const user = await prisma.user.findFirst({
@@ -228,7 +229,8 @@ export async function refreshAccessToken(token: string, context?: any): Promise<
     context
   );
 
-  return signAccessToken(newPayload);
+  // await 추가
+  return await signAccessToken(newPayload);
 }
 
 // 로그아웃

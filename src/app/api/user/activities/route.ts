@@ -3,18 +3,18 @@ import { getUserActivities } from '@/lib/activity';
 import { getUserIdFromRequest } from '@/utils/request-utils';
 import { z } from 'zod';
 
-// 유효성 검사 스키마
+// 유효성 검사 스키마 수정
 const getActivitiesSchema = z.object({
   limit: z.number().positive().optional(),
   offset: z.number().nonnegative().optional(),
-  startDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
-  endDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
+  startDate: z.string().optional().nullable(), // nullable() 추가
+  endDate: z.string().optional().nullable(),   // nullable() 추가
   activityCodes: z.array(z.string()).optional(),
 });
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = getUserIdFromRequest(request);
+    const userId = await getUserIdFromRequest(request);
     
     if (!userId) {
       return NextResponse.json({ 
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
-    const startDate = searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined;
-    const endDate = searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined;
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     const activityCodes = searchParams.get('activityCodes') 
       ? searchParams.get('activityCodes')!.split(',')
       : undefined;
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
       getActivitiesSchema.parse({
         limit,
         offset,
-        startDate: searchParams.get('startDate'),
-        endDate: searchParams.get('endDate'),
+        startDate,
+        endDate,
         activityCodes,
       });
     } catch (error) {
@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
     const result = await getUserActivities(userId, {
       limit,
       offset,
-      startDate,
-      endDate,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
       activityCodes,
     });
 

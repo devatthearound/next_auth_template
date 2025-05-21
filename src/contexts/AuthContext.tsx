@@ -25,6 +25,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isCustomer: boolean;
   isOwner: boolean;
+  refreshCsrfToken: () => Promise<void>; // CSRF 토큰 새로고침 함수 추가
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,7 +45,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setIsLoading(false);
     }
+    
+    // CSRF 토큰 가져오기
+    refreshCsrfToken();
   }, []);
+
+  // CSRF 토큰 새로고침
+  const refreshCsrfToken = async (): Promise<void> => {
+    try {
+      await fetch('/api/auth/csrf-token', {
+        method: 'GET',
+        credentials: 'include', // 쿠키 포함
+      });
+    } catch (error) {
+      console.error('Failed to refresh CSRF token:', error);
+    }
+  };
 
   // 사용자 프로필 가져오기
   const fetchUserProfile = async (token: string) => {
@@ -53,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/user/profile', {
         headers: {
           Authorization: `Bearer ${token}`,
+          'X-XSRF-TOKEN': getCsrfToken() || '', // CSRF 토큰 추가
         },
+        credentials: 'include', // 쿠키 포함
       });
 
       if (response.ok) {
@@ -72,21 +90,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // CSRF 토큰 가져오기 (쿠키에서)
+  const getCsrfToken = (): string | null => {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'XSRF-TOKEN') {
+        return decodeURIComponent(value);
+      }
+    }
+    return null;
+  };
+
   // 로그인
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      
+      // CSRF 토큰 새로고침
+      await refreshCsrfToken();
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-XSRF-TOKEN': getCsrfToken() || '', // CSRF 토큰 추가
         },
+        credentials: 'include', // 쿠키 포함
         body: JSON.stringify({ email, password }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Access Token:", data.accessToken); // 디버깅용
         localStorage.setItem('accessToken', data.accessToken);
         setAccessToken(data.accessToken);
         setUser(data.user);
@@ -105,11 +140,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (userData: any): Promise<boolean> => {
     try {
       setIsLoading(true);
+      
+      // CSRF 토큰 새로고침
+      await refreshCsrfToken();
+      
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-XSRF-TOKEN': getCsrfToken() || '', // CSRF 토큰 추가
         },
+        credentials: 'include', // 쿠키 포함
         body: JSON.stringify(userData),
       });
 
@@ -131,7 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            'X-XSRF-TOKEN': getCsrfToken() || '', // CSRF 토큰 추가
           },
+          credentials: 'include', // 쿠키 포함
         });
       }
     } catch (error) {
@@ -161,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isCustomer,
         isOwner,
+        refreshCsrfToken,
       }}
     >
       {children}

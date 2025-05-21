@@ -11,11 +11,11 @@ export function getTokenFromRequest(req: NextRequest): string | null {
 }
 
 // 요청에서 사용자 ID 가져오기
-export function getUserIdFromRequest(req: NextRequest): string | null {
+export async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
   const token = getTokenFromRequest(req);
   if (!token) return null;
   
-  const payload = verifyToken(token);
+  const payload = await verifyToken(token);
   return payload?.userId || null;
 }
 
