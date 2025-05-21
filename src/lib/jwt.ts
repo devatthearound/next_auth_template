@@ -1,3 +1,4 @@
+// src/lib/jwt.ts
 import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 
 // 환경 변수에서 JWT 시크릿 가져오기 (없으면 에러 발생)
@@ -22,17 +23,42 @@ export interface JwtPayload {
   isPhoneVerified: boolean;
 }
 
-export function signAccessToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET as Secret, { expiresIn: JWT_EXPIRE } as SignOptions);
+export async function signAccessToken(payload: JwtPayload): Promise<string> {
+  return new Promise((resolve, reject) => {
+    jwt.sign(
+      payload, 
+      JWT_SECRET as Secret, 
+      { expiresIn: JWT_EXPIRE } as SignOptions, 
+      (err, token) => {
+        if (err) return reject(err);
+        resolve(token as string);
+      }
+    );
+  });
 }
 
-export function signRefreshToken(payload: JwtPayload): string {
-  return jwt.sign({ userId: payload.userId }, JWT_SECRET as Secret, { expiresIn: REFRESH_TOKEN_EXPIRE } as SignOptions);
+export async function signRefreshToken(payload: JwtPayload): Promise<string> {
+  return new Promise((resolve, reject) => {
+    jwt.sign(
+      { userId: payload.userId }, 
+      JWT_SECRET as Secret, 
+      { expiresIn: REFRESH_TOKEN_EXPIRE } as SignOptions, 
+      (err, token) => {
+        if (err) return reject(err);
+        resolve(token as string);
+      }
+    );
+  });
 }
 
-export function verifyToken(token: string): JwtPayload | null {
+export async function verifyToken(token: string): Promise<JwtPayload | null> {
   try {
-    return jwt.verify(token, JWT_SECRET as Secret) as JwtPayload;
+    return new Promise((resolve, reject) => {
+      jwt.verify(token, JWT_SECRET as Secret, (err, decoded) => {
+        if (err) return resolve(null);
+        resolve(decoded as JwtPayload);
+      });
+    });
   } catch (error) {
     return null;
   }

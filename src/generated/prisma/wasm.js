@@ -177,6 +177,15 @@ exports.Prisma.ActivityScalarFieldEnum = {
   status: 'status'
 };
 
+exports.Prisma.TokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  type: 'type',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -212,7 +221,8 @@ exports.Prisma.ModelName = {
   Customer: 'Customer',
   Owner: 'Owner',
   ActivityType: 'ActivityType',
-  Activity: 'Activity'
+  Activity: 'Activity',
+  Token: 'Token'
 };
 
 /**

@@ -1,30 +1,41 @@
-import { randomBytes, createHash } from 'crypto';
+// src/utils/csrf-utils.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-// CSRF 토큰 생성
-export function generateCsrfToken(): string {
-  return randomBytes(32).toString('hex');
+// Generate a random CSRF token using Web Crypto API (Edge Runtime compatible)
+export async function generateCsrfToken(): Promise<string> {
+  const buffer = new Uint8Array(32);
+  crypto.getRandomValues(buffer);
+  return Array.from(buffer)
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-// CSRF 토큰 해싱 (클라이언트에 전송할 때)
-export function hashCsrfToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+// Hash CSRF token using Web Crypto API (Edge Runtime compatible)
+export async function hashCsrfToken(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
 }
 
-// CSRF 토큰 쿠키 설정
-export function setCsrfTokenCookie(response: NextResponse, token: string) {
+// Set CSRF token cookie
+export async function setCsrfTokenCookie(response: NextResponse, token: string) {
+  const hashedToken = await hashCsrfToken(token);
+  
   response.cookies.set({
     name: 'XSRF-TOKEN',
-    value: hashCsrfToken(token),
-    httpOnly: false, // JavaScript에서 읽을 수 있도록 함
+    value: hashedToken,
+    httpOnly: false, // JavaScript can read this
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 60 * 24, // 24시간
+    maxAge: 60 * 60 * 24, // 24 hours
   });
   
-  // 서버에서 검증에 사용할 원본 토큰은 HTTP-only 쿠키로 저장
+  // Server-side token for verification is stored as HTTP-only
   response.cookies.set({
     name: 'CSRF-TOKEN',
     value: token,
@@ -32,30 +43,30 @@ export function setCsrfTokenCookie(response: NextResponse, token: string) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 60 * 24, // 24시간
+    maxAge: 60 * 60 * 24, // 24 hours
   });
   
   return response;
 }
 
-// CSRF 토큰 검증
-export function validateCsrfToken(request: NextRequest): boolean {
-  // 요청 헤더에서 해시된 CSRF 토큰 가져오기
+// Validate CSRF token
+export async function validateCsrfToken(request: NextRequest): Promise<boolean> {
+  // Get header token
   const headerToken = request.headers.get('X-XSRF-TOKEN');
   
   if (!headerToken) {
     return false;
   }
   
-  // 쿠키에서 원본 CSRF 토큰 가져오기
+  // Get cookie token
   const cookieToken = request.cookies.get('CSRF-TOKEN')?.value;
   
   if (!cookieToken) {
     return false;
   }
   
-  // 원본 토큰 해싱하여 헤더 토큰과 비교
-  const hashedCookieToken = hashCsrfToken(cookieToken);
+  // Hash cookie token and compare with header token
+  const hashedCookieToken = await hashCsrfToken(cookieToken);
   
   return hashedCookieToken === headerToken;
 }

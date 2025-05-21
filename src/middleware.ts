@@ -1,11 +1,12 @@
+// src/middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from './lib/jwt';
 import { validateCsrfToken } from './utils/csrf-utils';
 import { rateLimit } from './middleware/rate-limit';
 
-// 미들웨어 설정 - 모든 요청에 적용
-export function middleware(request: NextRequest) {
+// Middleware設定 - 모든 요청에 적용
+export async function middleware(request: NextRequest) {
   // API 경로만 처리
   if (!request.nextUrl.pathname.startsWith('/api')) {
     return NextResponse.next();
@@ -24,7 +25,7 @@ export function middleware(request: NextRequest) {
 
   // 3. POST, PUT, DELETE, PATCH 요청에 대해 CSRF 토큰 검증
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) && !isCsrfExempt(request.nextUrl.pathname)) {
-    const isValidCsrfToken = validateCsrfToken(request);
+    const isValidCsrfToken = await validateCsrfToken(request);
     
     if (!isValidCsrfToken) {
       return new NextResponse(
@@ -49,7 +50,7 @@ export function middleware(request: NextRequest) {
   }
 
   const token = authHeader.split(' ')[1];
-  const payload = verifyToken(token);
+  const payload = await verifyToken(token);
 
   if (!payload) {
     return new NextResponse(
@@ -103,6 +104,7 @@ function isPublicPath(path: string): boolean {
     '/api/auth/login',
     '/api/auth/csrf-token', // CSRF 토큰 발급 API 추가
     '/api/auth/refresh-token',
+    '/api/auth/reset-password',
     '/api/public'
   ];
   

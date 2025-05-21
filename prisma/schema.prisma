@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -19,16 +20,18 @@ enum UserType {
   OWNER
 }
 
+// prisma/schema.prisma 수정
+
 model User {
   id                 String    @id @default(cuid())
   email              String?   
   phoneNumber        String?   
   password           String
   name               String?
+  profileImageUrl    String?   // 프로필 이미지 URL 추가
   userType           UserType  @default(CUSTOMER)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
-  refreshToken       String?   @db.Text
   isActive           Boolean   @default(true)
   isEmailVerified    Boolean   @default(false)
   isPhoneVerified    Boolean   @default(false)
@@ -38,6 +41,8 @@ model User {
   customer           Customer?
   owner              Owner?
   activities         Activity[]
+  tokens             Token[]   // 토큰 관계 추가
+  refreshTokens      RefreshToken[] // 리프레시 토큰 관계 추가
   
   @@unique([email, isActive])
   @@unique([phoneNumber, isActive])
@@ -49,6 +54,8 @@ model Customer {
   id                 String    @id @default(cuid())
   userId             String    @unique
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName        String?   // 표시 이름 추가 (선택적)
+  profileImageUrl    String?   // 프로필 이미지 URL 추가 (선택적)
   address            String?
   preferences        Json?
   createdAt          DateTime  @default(now())
@@ -61,6 +68,8 @@ model Owner {
   id                 String    @id @default(cuid())
   userId             String    @unique
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName        String?   // 표시 이름 추가 (선택적)
+  profileImageUrl    String?   // 프로필 이미지 URL 추가 (선택적)
   businessName       String
   businessNumber     String?
   businessAddress    String?
@@ -99,4 +108,37 @@ model Activity {
   @@index([userId])
   @@index([activityTypeId])
   @@index([timestamp])
+}
+
+// New Token model for verification and password reset
+model Token {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String    // Hashed token
+  type        String    // PASSWORD_RESET, EMAIL_VERIFICATION, PHONE_VERIFICATION
+  expiresAt   DateTime  // Expiration time
+  createdAt   DateTime  @default(now())
+  
+  @@index([token])
+  @@index([userId])
+  @@index([type])
+  @@index([expiresAt])
+}
+
+// 리프레시 토큰 모델 추가
+model RefreshToken {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String    @unique // 해시된 토큰
+  deviceInfo  String?   // 디바이스 정보 (브라우저, OS 등)
+  ipAddress   String?   // IP 주소
+  lastUsedAt  DateTime  @default(now())
+  expiresAt   DateTime  // 만료 시간
+  createdAt   DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
 }

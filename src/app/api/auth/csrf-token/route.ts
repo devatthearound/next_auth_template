@@ -5,7 +5,7 @@ import { generateCsrfToken, setCsrfTokenCookie } from '@/utils/csrf-utils';
 export async function GET() {
   try {
     // 새 CSRF 토큰 생성
-    const token = generateCsrfToken();
+    const token = await generateCsrfToken();
     
     // 응답 객체 생성
     const response = NextResponse.json({ 

@@ -159,14 +159,18 @@ export async function loginUser(credentials: {
     isPhoneVerified: user.isPhoneVerified,
   };
 
-  // 비동기 함수에 await 추가
   const accessToken = await signAccessToken(payload);
   const refreshToken = await signRefreshToken(payload);
 
   // 리프레시 토큰 저장
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { refreshToken }, // refreshToken이 이제 문자열입니다
+  await prisma.refreshToken.create({
+    data: {
+      userId: user.id,
+      token: refreshToken,
+      deviceInfo: context?.userAgent,
+      ipAddress: context?.ipAddress,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일
+    },
   });
 
   // 로그인 성공 로그
@@ -202,49 +206,84 @@ export async function refreshAccessToken(token: string, context?: any): Promise<
   const payload = await verifyToken(token);
   if (!payload) return null;
 
-  const user = await prisma.user.findFirst({
+  // 리프레시 토큰 찾기
+  const refreshToken = await prisma.refreshToken.findFirst({
     where: { 
-      id: payload.userId,
-      isActive: true,
-      refreshToken: token
+      token,
+      expiresAt: { gt: new Date() },
     },
+    include: {
+      user: {
+        where: { isActive: true }
+      }
+    }
   });
 
-  if (!user) return null;
+  if (!refreshToken || !refreshToken.user) return null;
+
+  // 리프레시 토큰 사용 시간 업데이트
+  await prisma.refreshToken.update({
+    where: { id: refreshToken.id },
+    data: { lastUsedAt: new Date() }
+  });
 
   const newPayload: JwtPayload = {
-    userId: user.id,
-    email: user.email || undefined,
-    phoneNumber: user.phoneNumber || undefined,
-    userType: user.userType,
-    isEmailVerified: user.isEmailVerified,
-    isPhoneVerified: user.isPhoneVerified,
+    userId: refreshToken.user.id,
+    email: refreshToken.user.email || undefined,
+    phoneNumber: refreshToken.user.phoneNumber || undefined,
+    userType: refreshToken.user.userType,
+    isEmailVerified: refreshToken.user.isEmailVerified,
+    isPhoneVerified: refreshToken.user.isPhoneVerified,
   };
 
   // 토큰 갱신 로그
   await logUserActivity(
-    user.id, 
+    refreshToken.user.id, 
     'TOKEN_REFRESH', 
     {}, 
     context
   );
 
-  // await 추가
   return await signAccessToken(newPayload);
 }
 
 // 로그아웃
-export async function logoutUser(userId: string, context?: any): Promise<boolean> {
+export async function logoutUser(userId: string, refreshToken: string, context?: any): Promise<boolean> {
   try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken: null },
+    // 특정 리프레시 토큰 삭제
+    await prisma.refreshToken.deleteMany({
+      where: {
+        userId,
+        token: refreshToken
+      }
     });
 
     // 로그아웃 로그
     await logUserActivity(
       userId, 
       'USER_LOGOUT', 
+      {}, 
+      context
+    );
+
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// 모든 디바이스 로그아웃
+export async function logoutAllDevices(userId: string, context?: any): Promise<boolean> {
+  try {
+    // 사용자의 모든 리프레시 토큰 삭제
+    await prisma.refreshToken.deleteMany({
+      where: { userId }
+    });
+
+    // 로그아웃 로그
+    await logUserActivity(
+      userId, 
+      'USER_LOGOUT_ALL', 
       {}, 
       context
     );
