@@ -211,11 +211,12 @@ export async function refreshAccessToken(token: string, context?: any): Promise<
     where: { 
       token,
       expiresAt: { gt: new Date() },
+      user: {
+        isActive: true
+      }
     },
     include: {
-      user: {
-        where: { isActive: true }
-      }
+      user: true
     }
   });
 
@@ -301,9 +302,13 @@ export async function deactivateUser(userId: string, context?: any): Promise<boo
       where: { id: userId },
       data: {
         isActive: false,
-        deletedAt: new Date(),
-        refreshToken: null,
+        deletedAt: new Date()
       },
+    });
+
+    // 사용자의 모든 리프레시 토큰 삭제
+    await prisma.refreshToken.deleteMany({
+      where: { userId }
     });
 
     // 계정 비활성화 로그

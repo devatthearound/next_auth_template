@@ -126,10 +126,10 @@ exports.Prisma.UserScalarFieldEnum = {
   phoneNumber: 'phoneNumber',
   password: 'password',
   name: 'name',
+  profileImageUrl: 'profileImageUrl',
   userType: 'userType',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  refreshToken: 'refreshToken',
   isActive: 'isActive',
   isEmailVerified: 'isEmailVerified',
   isPhoneVerified: 'isPhoneVerified',
@@ -139,6 +139,8 @@ exports.Prisma.UserScalarFieldEnum = {
 exports.Prisma.CustomerScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  displayName: 'displayName',
+  profileImageUrl: 'profileImageUrl',
   address: 'address',
   preferences: 'preferences',
   createdAt: 'createdAt',
@@ -148,6 +150,8 @@ exports.Prisma.CustomerScalarFieldEnum = {
 exports.Prisma.OwnerScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  displayName: 'displayName',
+  profileImageUrl: 'profileImageUrl',
   businessName: 'businessName',
   businessNumber: 'businessNumber',
   businessAddress: 'businessAddress',
@@ -182,6 +186,17 @@ exports.Prisma.TokenScalarFieldEnum = {
   userId: 'userId',
   token: 'token',
   type: 'type',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.RefreshTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  deviceInfo: 'deviceInfo',
+  ipAddress: 'ipAddress',
+  lastUsedAt: 'lastUsedAt',
   expiresAt: 'expiresAt',
   createdAt: 'createdAt'
 };
@@ -222,7 +237,8 @@ exports.Prisma.ModelName = {
   Owner: 'Owner',
   ActivityType: 'ActivityType',
   Activity: 'Activity',
-  Token: 'Token'
+  Token: 'Token',
+  RefreshToken: 'RefreshToken'
 };
 
 /**
