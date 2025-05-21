@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  CUSTOMER
+  OWNER
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String?
+  phoneNumber     String?
+  password        String
+  name            String?
+  userType        UserType  @default(CUSTOMER)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  refreshToken    String?   @db.Text
+  isActive        Boolean   @default(true)
+  isEmailVerified Boolean   @default(false)
+  isPhoneVerified Boolean   @default(false)
+  deletedAt       DateTime?
+
+  // 관계
+  customer   Customer?
+  owner      Owner?
+  activities Activity[]
+
+  @@unique([email, isActive])
+  @@unique([phoneNumber, isActive])
+  @@index([email, isActive])
+  @@index([phoneNumber, isActive])
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address     String?
+  preferences Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Owner {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName    String
+  businessNumber  String?
+  businessAddress String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ActivityType {
+  id          String     @id @default(cuid())
+  code        String     @unique // 시스템 내부용 코드
+  name        String // 표시용 이름
+  description String?
+  category    String // 인증, 계정, 비즈니스, 거래 등 분류
+  importance  String // HIGH, MEDIUM, LOW 등
+  createdAt   DateTime   @default(now())
+  activities  Activity[]
+
+  @@index([code])
+}
+
+model Activity {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityTypeId String
+  activityType   ActivityType @relation(fields: [activityTypeId], references: [id])
+  timestamp      DateTime     @default(now())
+  metadata       Json? // 활동 유형별 추가 데이터
+  ipAddress      String?
+  userAgent      String? // 브라우저, 디바이스 정보
+  geoLocation    String? // 대략적인 위치 정보 (선택적)
+  status         String? // 성공, 실패 등 상태 정보
+
+  @@index([userId])
+  @@index([activityTypeId])
+  @@index([timestamp])
+}
