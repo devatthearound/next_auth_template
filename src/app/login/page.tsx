@@ -7,7 +7,7 @@ import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 function LoginContent() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoading } = useAuth();
@@ -19,12 +19,12 @@ function LoginContent() {
     e.preventDefault();
     setError('');
     
-    if (!email || !password) {
-      setError('Email and password are required');
+    if (!identifier || !password) {
+      setError('Identifier and password are required');
       return;
     }
     
-    const success = await login(email, password);
+    const success = await login(identifier, password);
     if (success) {
       router.push(callbackUrl);
     } else {
@@ -44,12 +44,12 @@ function LoginContent() {
       
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label htmlFor="email" className="block text-gray-700 mb-2">Email</label>
+          <label htmlFor="identifier" className="block text-gray-700 mb-2">Email or Phone Number</label>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="identifier"
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter your email"
             disabled={isLoading}

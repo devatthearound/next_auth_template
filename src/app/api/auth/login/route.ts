@@ -6,12 +6,8 @@ import { z } from 'zod';
 
 // 유효성 검사 스키마
 const loginSchema = z.object({
-  email: z.string().email().optional(),
-  phoneNumber: z.string().min(10).optional(),
-  password: z.string().min(1),
-}).refine(data => data.email || data.phoneNumber, {
-  message: "Either email or phone number is required",
-  path: ["email", "phoneNumber"],
+  identifier: z.string().min(1, "이메일 또는 전화번호를 입력해주세요"),
+  password: z.string().min(1, "비밀번호를 입력해주세요"),
 });
 
 export async function POST(request: NextRequest) {
@@ -28,19 +24,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    // 사용자 식별자 (이메일 또는 전화번호)
-    const identifier = body.email || body.phoneNumber || '';
+    // 사용자 식별자
+    const identifier = body.identifier;
     
     // IP 주소 (백업 식별자)
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     
-    // 로그인 상태 확인 (이메일/전화번호 기준)
+    // 로그인 상태 확인 (식별자 기준)
     const loginStatus = checkLoginStatus(identifier);
     
     // IP 기준 로그인 상태도 확인 (IP 차단 여부)
     const ipLoginStatus = checkLoginStatus(ip);
     
-    // 이메일/전화번호 또는 IP가 차단된 경우
+    // 식별자 또는 IP가 차단된 경우
     if (loginStatus.blocked || ipLoginStatus.blocked) {
       const blockedUntil = Math.max(
         loginStatus.blockedUntil || 0, 
@@ -62,8 +58,7 @@ export async function POST(request: NextRequest) {
     
     // 사용자 로그인
     const result = await loginUser({
-      email: body.email,
-      phoneNumber: body.phoneNumber,
+      identifier: body.identifier,
       password: body.password,
     }, context);
 
@@ -73,7 +68,7 @@ export async function POST(request: NextRequest) {
     recordLoginAttempt(ip, success);
 
     if (!success) {
-      // 남은 시도 횟수 (이메일/전화번호 기준)
+      // 남은 시도 횟수 (식별자 기준)
       const remainingAttempts = Math.min(
         loginStatus.remainingAttempts - 1,
         ipLoginStatus.remainingAttempts - 1

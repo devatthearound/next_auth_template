@@ -226,7 +226,7 @@ API 요청에 대한 보안 검증을 수행하는 미들웨어:
 3. **환경 변수 설정**:
    `.env.local` 파일 생성:
    ```
-   DATABASE_URL="postgresql://next:next1234@localhost:5433/next?schema=public"
+   DATABASE_URL="postgresql://next:next1234@localhost:5434/next?schema=public"
    
    # 보안 시크릿 (강력한 랜덤 문자열 사용 필수)
    JWT_SECRET="your-super-secure-jwt-key"

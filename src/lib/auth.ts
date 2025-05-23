@@ -96,22 +96,21 @@ export async function registerUser(data: {
 
 // 로그인 (이메일 또는 전화번호로)
 export async function loginUser(credentials: {
-  email?: string;
-  phoneNumber?: string;
+  identifier: string;
   password: string;
 }, context?: any): Promise<{ user: User; accessToken: string; refreshToken: string } | null> {
-  if (!credentials.email && !credentials.phoneNumber) {
-    throw new Error('Email or phone number is required');
+  if (!credentials.identifier) {
+    throw new Error('Identifier is required');
   }
 
-  // 이메일 또는 전화번호로 사용자 찾기
+  // 이메일 또는 전화번호로 사용자 검색
   const user = await prisma.user.findFirst({
     where: {
-      isActive: true,
       OR: [
-        { email: credentials.email || null },
-        { phoneNumber: credentials.phoneNumber || null },
+        { email: credentials.identifier },
+        { phoneNumber: credentials.identifier }
       ],
+      isActive: true,
     },
     include: {
       customer: true,
@@ -121,18 +120,15 @@ export async function loginUser(credentials: {
 
   if (!user) {
     // 로그인 실패 로그
-    if (credentials.email || credentials.phoneNumber) {
-      await logUserActivity(
-        'unknown', 
-        'USER_LOGIN_FAILED', 
-        { 
-          reason: 'User not found',
-          email: credentials.email,
-          phoneNumber: credentials.phoneNumber 
-        }, 
-        { ...context, status: 'FAILED' }
-      );
-    }
+    await logUserActivity(
+      'unknown', 
+      'USER_LOGIN_FAILED', 
+      { 
+        reason: 'User not found',
+        identifier: credentials.identifier
+      }, 
+      { ...context, status: 'FAILED' }
+    );
     return null;
   }
 
@@ -149,7 +145,7 @@ export async function loginUser(credentials: {
     return null;
   }
 
-  // 토큰 생성
+  // 나머지 로직은 동일...
   const payload: JwtPayload = {
     userId: user.id,
     email: user.email || undefined,
@@ -183,6 +179,7 @@ export async function loginUser(credentials: {
 
   return { user, accessToken, refreshToken };
 }
+
 
 // 토큰으로 사용자 정보 가져오기
 export async function getUserFromToken(token: string): Promise<User | null> {

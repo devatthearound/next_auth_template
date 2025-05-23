@@ -1,12 +1,16 @@
+// src/app/profile/page.tsx - useApi를 사용한 개선된 버전
+
 'use client';
 
 import { useState, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserApi } from '@/hooks/useApi';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function ProfilePage() {
-  const { user, accessToken, isLoading, refreshCsrfToken, requestEmailVerification, requestPhoneVerification } = useAuth();
+  const { user, isLoading: authLoading, requestEmailVerification, requestPhoneVerification } = useAuth();
+  const { updateProfile } = useUserApi();
   
   const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState('');
@@ -40,59 +44,29 @@ export default function ProfilePage() {
     setSuccess('');
   };
   
-  // Update profile
+  // Update profile using the new API hook
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    
-    if (!accessToken) return;
-    
     setIsSubmitting(true);
     
     try {
-      // Refresh CSRF token
-      await refreshCsrfToken();
-      
-      // Get CSRF token from cookie
-      const cookies = document.cookie.split(';');
-      let csrfToken = '';
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'XSRF-TOKEN') {
-          csrfToken = decodeURIComponent(value);
-          break;
-        }
-      }
-      
-      const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-          'X-XSRF-TOKEN': csrfToken,
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          phoneNumber,
-        }),
+      await updateProfile({
+        name,
+        email,
+        phoneNumber,
       });
       
-      if (response.ok) {
-        setSuccess('Profile updated successfully');
-        setEditMode(false);
-        
-        // If email/phone changed, they will need to be verified again
-        setTimeout(() => {
-          window.location.reload(); // Refresh to update user data
-        }, 1500);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to update profile');
-      }
-    } catch (error) {
-      setError('An error occurred. Please try again.');
+      setSuccess('Profile updated successfully');
+      setEditMode(false);
+      
+      // Refresh to update user data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error: any) {
+      setError(error.message || 'Failed to update profile');
     } finally {
       setIsSubmitting(false);
     }
@@ -140,7 +114,7 @@ export default function ProfilePage() {
     }
   };
   
-  if (isLoading) {
+  if (authLoading) {
     return <LoadingSpinner />;
   }
   
@@ -328,28 +302,6 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-
-        {/* For phone verification code entry */}
-        {user?.phoneNumber && !user?.isPhoneVerified && (
-          <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Phone Verification</h2>
-            <p className="mb-4">If you've requested a phone verification code, enter it below:</p>
-            
-            <div className="flex space-x-4">
-              <input
-                type="text"
-                maxLength={6}
-                className="p-2 border border-gray-300 rounded"
-                placeholder="Enter 6-digit code"
-              />
-              <button
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Verify Phone
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </ProtectedRoute>
   );

@@ -44,39 +44,9 @@ model User {
   tokens             Token[]   // 토큰 관계 추가
   refreshTokens      RefreshToken[] // 리프레시 토큰 관계 추가
   
-  @@unique([email, isActive])
-  @@unique([phoneNumber, isActive])
+
   @@index([email, isActive])
   @@index([phoneNumber, isActive])
-}
-
-model Customer {
-  id                 String    @id @default(cuid())
-  userId             String    @unique
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName        String?   // 표시 이름 추가 (선택적)
-  profileImageUrl    String?   // 프로필 이미지 URL 추가 (선택적)
-  address            String?
-  preferences        Json?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  
-  @@index([userId])
-}
-
-model Owner {
-  id                 String    @id @default(cuid())
-  userId             String    @unique
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName        String?   // 표시 이름 추가 (선택적)
-  profileImageUrl    String?   // 프로필 이미지 URL 추가 (선택적)
-  businessName       String
-  businessNumber     String?
-  businessAddress    String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  
-  @@index([userId])
 }
 
 model ActivityType {
@@ -141,4 +111,36 @@ model RefreshToken {
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+}
+
+
+model Customer {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName        String?   // 표시 이름 추가 (선택적)
+  profileImageUrl    String?   // 프로필 이미지 URL 추가 (선택적)
+  address            String?
+  preferences        Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  
+  @@index([userId])
+}
+
+model Owner {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName        String?   // 표시 이름 추가 (선택적)
+  profileImageUrl    String?   // 프로필 이미지 URL 추가 (선택적)
+  businessName       String
+  businessNumber     String?
+  businessAddress    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  
+  @@index([userId])
 }

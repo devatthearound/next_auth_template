@@ -1,7 +1,10 @@
+// src/contexts/AuthContext.tsx - ApiClient 통합된 버전
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { ApiClient } from '@/lib/api-client';
 
 type UserType = 'CUSTOMER' | 'OWNER';
 
@@ -31,12 +34,14 @@ interface AuthContextType {
   verifyPhone: (token: string) => Promise<boolean>;
   requestEmailVerification: () => Promise<boolean>;
   requestPhoneVerification: () => Promise<boolean>;
+  // API 클라이언트 추가
+  api: ApiClient;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Token refresh configuration
-const TOKEN_REFRESH_INTERVAL = 4 * 60 * 1000; // 4 minutes (considering 5min token expiry)
+const TOKEN_REFRESH_INTERVAL = 4 * 60 * 1000; // 4 minutes
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -46,25 +51,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
+  // API 클라이언트 인스턴스
+  const [api, setApi] = useState<ApiClient>(() => new ApiClient());
+
+  // API 클라이언트 업데이트
+  useEffect(() => {
+    const newApi = new ApiClient({
+      accessToken: accessToken || undefined,
+      refreshCsrfToken,
+    });
+    setApi(newApi);
+  }, [accessToken]);
+
   // Token expiration handling
   const startRefreshTimer = () => {
-    // Clear any existing timer
     if (refreshTimerRef.current) {
       clearInterval(refreshTimerRef.current);
     }
 
-    // Set up new timer for token refresh
     refreshTimerRef.current = setInterval(async () => {
       const success = await refreshAccessToken();
       if (!success && !refreshTokenExpired) {
-        // If token refresh fails and we haven't already flagged it as expired
         setRefreshTokenExpired(true);
         logout();
       }
     }, TOKEN_REFRESH_INTERVAL);
   };
 
-  // Stop refresh timer
   const stopRefreshTimer = () => {
     if (refreshTimerRef.current) {
       clearInterval(refreshTimerRef.current);
@@ -79,9 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-XSRF-TOKEN': getCsrfToken() || '',
+          'X-CSRF-Token': getCsrfToken() || '',
         },
-        credentials: 'include', // to include the httpOnly refresh token cookie
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -109,10 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
     
-    // CSRF token initialization
     refreshCsrfToken();
 
-    // Cleanup refresh timer on unmount
     return () => {
       stopRefreshTimer();
     };
@@ -130,35 +141,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Get user profile
+  // Get user profile using API client
   const fetchUserProfile = async (token: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/user/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-XSRF-TOKEN': getCsrfToken() || '',
-        },
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        startRefreshTimer(); // Start token refresh timer
-      } else {
-        // Invalid token, attempt to refresh once
-        const refreshed = await refreshAccessToken();
-        if (!refreshed) {
-          // If refresh fails, logout
-          localStorage.removeItem('accessToken');
-          setAccessToken(null);
-          setUser(null);
-          stopRefreshTimer();
-        }
-      }
+      const tempApi = new ApiClient({ accessToken: token });
+      const data = await tempApi.getJson('/user/profile');
+      setUser(data.user);
+      startRefreshTimer();
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) {
+        localStorage.removeItem('accessToken');
+        setAccessToken(null);
+        setUser(null);
+        stopRefreshTimer();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -166,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Get CSRF token from cookies
   const getCsrfToken = (): string | null => {
+    if (typeof document === 'undefined') return null;
     const cookies = document.cookie.split(';');
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
@@ -176,33 +176,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   };
 
-  // Login
-  const login = async (email: string, password: string): Promise<boolean> => {
+  // Login using API client
+  // Login using API client
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       
       await refreshCsrfToken();
       
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-XSRF-TOKEN': getCsrfToken() || '',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('accessToken', data.accessToken);
-        setAccessToken(data.accessToken);
-        setUser(data.user);
-        setRefreshTokenExpired(false);
-        startRefreshTimer();
-        return true;
-      }
-      return false;
+      const tempApi = new ApiClient({ refreshCsrfToken });
+      const data = await tempApi.postJson('/auth/login', 
+        { identifier, password }, 
+        { skipAuth: true }
+      );
+      
+      localStorage.setItem('accessToken', data.accessToken);
+      setAccessToken(data.accessToken);
+      setUser(data.user);
+      setRefreshTokenExpired(false);
+      startRefreshTimer();
+      return true;
     } catch (error) {
       console.error('Login failed:', error);
       return false;
@@ -211,24 +204,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Register
+  // Register using API client
   const register = async (userData: any): Promise<boolean> => {
     try {
       setIsLoading(true);
       
       await refreshCsrfToken();
       
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-XSRF-TOKEN': getCsrfToken() || '',
-        },
-        credentials: 'include',
-        body: JSON.stringify(userData),
-      });
-
-      return response.ok;
+      const tempApi = new ApiClient({ refreshCsrfToken });
+      await tempApi.postJson('/auth/register', userData, { skipAuth: true });
+      
+      return true;
     } catch (error) {
       console.error('Registration failed:', error);
       return false;
@@ -237,21 +223,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Logout
+  // Logout using API client
   const logout = async (): Promise<void> => {
     try {
       setIsLoading(true);
       stopRefreshTimer();
       
       if (accessToken) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'X-XSRF-TOKEN': getCsrfToken() || '',
-          },
-          credentials: 'include',
-        });
+        await api.postJson('/auth/logout', {});
       }
     } catch (error) {
       console.error('Logout error:', error);
@@ -265,24 +244,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Password reset request
+  // Password reset request using API client
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       
       await refreshCsrfToken();
       
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-XSRF-TOKEN': getCsrfToken() || '',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email }),
-      });
-
-      return response.ok;
+      const tempApi = new ApiClient({ refreshCsrfToken });
+      await tempApi.postJson('/auth/reset-password', 
+        { email }, 
+        { skipAuth: true }
+      );
+      
+      return true;
     } catch (error) {
       console.error('Password reset request failed:', error);
       return false;
@@ -291,25 +266,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Email verification
+  // Email verification using API client
   const verifyEmail = async (token: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       
-      const response = await fetch(`/api/auth/verify-email/${token}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+      const tempApi = new ApiClient();
+      await tempApi.get(`/auth/verify-email/${token}`, { skipAuth: true, skipCsrf: true });
 
-      if (response.ok && user) {
-        // Update user data to reflect verified email
+      if (user) {
         setUser({
           ...user,
           isEmailVerified: true
         });
       }
 
-      return response.ok;
+      return true;
     } catch (error) {
       console.error('Email verification failed:', error);
       return false;
@@ -318,25 +290,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Phone verification
+  // Phone verification using API client
   const verifyPhone = async (token: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       
-      const response = await fetch(`/api/auth/verify-phone/${token}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+      await api.get(`/auth/verify-phone/${token}`, { skipAuth: true, skipCsrf: true });
 
-      if (response.ok && user) {
-        // Update user data to reflect verified phone
+      if (user) {
         setUser({
           ...user,
           isPhoneVerified: true
         });
       }
 
-      return response.ok;
+      return true;
     } catch (error) {
       console.error('Phone verification failed:', error);
       return false;
@@ -345,26 +313,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Request email verification
+  // Request email verification using API client
   const requestEmailVerification = async (): Promise<boolean> => {
     if (!user || !accessToken) return false;
     
     try {
       setIsLoading(true);
       
-      await refreshCsrfToken();
-      
-      const response = await fetch('/api/auth/request-email-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-          'X-XSRF-TOKEN': getCsrfToken() || '',
-        },
-        credentials: 'include',
-      });
-
-      return response.ok;
+      await api.postJson('/auth/request-email-verification', {});
+      return true;
     } catch (error) {
       console.error('Email verification request failed:', error);
       return false;
@@ -373,26 +330,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Request phone verification
+  // Request phone verification using API client
   const requestPhoneVerification = async (): Promise<boolean> => {
     if (!user || !accessToken) return false;
     
     try {
       setIsLoading(true);
       
-      await refreshCsrfToken();
-      
-      const response = await fetch('/api/auth/request-phone-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-          'X-XSRF-TOKEN': getCsrfToken() || '',
-        },
-        credentials: 'include',
-      });
-
-      return response.ok;
+      await api.postJson('/auth/request-phone-verification', {});
+      return true;
     } catch (error) {
       console.error('Phone verification request failed:', error);
       return false;
@@ -423,6 +369,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyPhone,
         requestEmailVerification,
         requestPhoneVerification,
+        api, // API 클라이언트 제공
       }}
     >
       {children}
