@@ -43,9 +43,31 @@ model User {
   activities    Activity[]
   tokens        Token[] // 토큰 관계 추가
   refreshTokens RefreshToken[] // 리프레시 토큰 관계 추가
+  fcmTokens     FcmToken[] // FCM 토큰 관계 추가
 
   @@index([email, isActive])
   @@index([phoneNumber, isActive])
+}
+
+// FCM 토큰 모델 추가
+model FcmToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique // FCM 토큰
+  deviceId   String? // 디바이스 고유 ID
+  deviceType String? // 디바이스 타입 (android, ios, web)
+  deviceInfo String? // 디바이스 정보 (모델명, OS 버전 등)
+  appVersion String? // 앱 버전
+  isActive   Boolean  @default(true)
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@index([deviceId])
+  @@index([isActive])
 }
 
 model ActivityType {

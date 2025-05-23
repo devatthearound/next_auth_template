@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import FCMTokenExample from '@/components/dashboard/FCMTokenExample';
 
 export default function DashboardPage() {
   const { user } = useAuth();

@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserApi } from '@/hooks/useApi';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import FCMTokenExample from '@/components/dashboard/FCMTokenExample';
 
 export default function ProfilePage() {
   const { user, isLoading: authLoading, requestEmailVerification, requestPhoneVerification } = useAuth();
@@ -301,6 +302,7 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+          <FCMTokenExample />
         </div>
       </div>
     </ProtectedRoute>

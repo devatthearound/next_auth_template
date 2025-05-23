@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '@/lib/auth';
-import { getRequestContext } from '@/utils/request-utils';
+import { getRequestContext, isWebViewRequest } from '@/utils/request-utils';
 import { checkLoginStatus, recordLoginAttempt } from '@/utils/login-attempts';
 import { z } from 'zod';
 
@@ -23,6 +23,10 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
+
+    // WebView 환경 감지
+    const isWebView = isWebViewRequest(request);
+    console.log('WebView 환경 감지:', isWebView);
 
     // 사용자 식별자
     const identifier = body.identifier;
@@ -88,23 +92,33 @@ export async function POST(request: NextRequest) {
     // 비밀번호 제외하고 반환
     const { password, ...userData } = user;
 
-    // refreshToken은 쿠키로 설정
-    const response = NextResponse.json({
+    // WebView 환경에 따른 다른 응답 처리
+    const responseData: any = {
       message: "Login successful",
       user: userData,
       accessToken
-    }, { status: 200 });
+    };
 
-    // 보안을 위해 쿠키에 refreshToken 설정
-    response.cookies.set({
-      name: 'refreshToken',
-      value: refreshToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7일
-    });
+    // WebView 환경인 경우 refreshToken도 응답에 포함
+    if (isWebView) {
+      responseData.refreshToken = refreshToken;
+      responseData.isWebView = true;
+    }
+
+    const response = NextResponse.json(responseData, { status: 200 });
+
+    // 웹 브라우저 환경인 경우에만 쿠키 설정
+    if (!isWebView) {
+      response.cookies.set({
+        name: 'refreshToken',
+        value: refreshToken,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7일
+      });
+    }
 
     return response;
   } catch (error) {

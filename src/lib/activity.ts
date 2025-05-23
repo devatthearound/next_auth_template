@@ -146,6 +146,12 @@ export async function initializeActivityTypes() {
     { code: 'USER_DEACTIVATE', name: 'Account Deactivate', category: 'ACCOUNT', importance: 'HIGH' },
     { code: 'TOKEN_REFRESH', name: 'Token Refresh', category: 'AUTHENTICATION', importance: 'LOW' },
     
+    // FCM 토큰 관련 활동 유형 추가
+    { code: 'FCM_TOKEN_UPDATED', name: 'FCM Token Updated', category: 'NOTIFICATION', importance: 'MEDIUM' },
+    { code: 'FCM_TOKENS_DEACTIVATED', name: 'FCM Tokens Deactivated', category: 'NOTIFICATION', importance: 'MEDIUM' },
+    { code: 'FCM_TOKEN_REGISTERED', name: 'FCM Token Registered', category: 'NOTIFICATION', importance: 'MEDIUM' },
+    { code: 'PUSH_NOTIFICATION_SENT', name: 'Push Notification Sent', category: 'NOTIFICATION', importance: 'LOW' },
+    
     // 고객 활동 유형
     { code: 'CUSTOMER_ORDER_CREATE', name: 'Order Created', category: 'CUSTOMER', importance: 'MEDIUM' },
     { code: 'CUSTOMER_ORDER_CANCEL', name: 'Order Cancelled', category: 'CUSTOMER', importance: 'MEDIUM' },

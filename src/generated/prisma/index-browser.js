@@ -136,6 +136,20 @@ exports.Prisma.UserScalarFieldEnum = {
   deletedAt: 'deletedAt'
 };
 
+exports.Prisma.FcmTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  deviceId: 'deviceId',
+  deviceType: 'deviceType',
+  deviceInfo: 'deviceInfo',
+  appVersion: 'appVersion',
+  isActive: 'isActive',
+  lastUsedAt: 'lastUsedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.ActivityTypeScalarFieldEnum = {
   id: 'id',
   code: 'code',
@@ -233,6 +247,7 @@ exports.UserType = exports.$Enums.UserType = {
 
 exports.Prisma.ModelName = {
   User: 'User',
+  FcmToken: 'FcmToken',
   ActivityType: 'ActivityType',
   Activity: 'Activity',
   Token: 'Token',

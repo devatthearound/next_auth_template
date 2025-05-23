@@ -144,6 +144,46 @@ interface LoginAttempt {
     };
   }
   
+  /**
+   * 특정 식별자의 로그인 시도 기록 초기화 (수동 차단 해제)
+   * @param identifier 사용자 식별자 (이메일 또는 IP 주소)
+   */
+  export function resetLoginAttempts(identifier: string): void {
+    if (loginAttempts[identifier]) {
+      delete loginAttempts[identifier];
+      console.log(`🔓 로그인 시도 기록 초기화: ${identifier}`);
+    }
+  }
+  
+  /**
+   * 모든 로그인 시도 기록 초기화
+   */
+  export function resetAllLoginAttempts(): void {
+    Object.keys(loginAttempts).forEach(key => {
+      delete loginAttempts[key];
+    });
+    console.log('🔓 모든 로그인 시도 기록 초기화 완료');
+  }
+  
+  /**
+   * 현재 차단된 식별자 목록 조회
+   */
+  export function getBlockedIdentifiers(): { identifier: string; blockedUntil: number }[] {
+    const now = Date.now();
+    const blocked: { identifier: string; blockedUntil: number }[] = [];
+    
+    for (const [identifier, attempt] of Object.entries(loginAttempts)) {
+      if (attempt.blockedUntil && attempt.blockedUntil > now) {
+        blocked.push({
+          identifier,
+          blockedUntil: attempt.blockedUntil
+        });
+      }
+    }
+    
+    return blocked;
+  }
+  
   // 주기적으로 만료된 데이터 정리 (메모리 누수 방지)
   setInterval(() => {
     const now = Date.now();
