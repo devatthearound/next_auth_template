@@ -119,16 +119,8 @@ export async function loginUser(credentials: {
   });
 
   if (!user) {
-    // 로그인 실패 로그
-    await logUserActivity(
-      'unknown', 
-      'USER_LOGIN_FAILED', 
-      { 
-        reason: 'User not found',
-        identifier: credentials.identifier
-      }, 
-      { ...context, status: 'FAILED' }
-    );
+    // 사용자가 존재하지 않는 경우 Activity 로깅은 건너뛰기
+    // (외래키 제약 조건 위반 방지)
     return null;
   }
 
