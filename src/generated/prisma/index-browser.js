@@ -136,29 +136,6 @@ exports.Prisma.UserScalarFieldEnum = {
   deletedAt: 'deletedAt'
 };
 
-exports.Prisma.CustomerScalarFieldEnum = {
-  id: 'id',
-  userId: 'userId',
-  displayName: 'displayName',
-  profileImageUrl: 'profileImageUrl',
-  address: 'address',
-  preferences: 'preferences',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-};
-
-exports.Prisma.OwnerScalarFieldEnum = {
-  id: 'id',
-  userId: 'userId',
-  displayName: 'displayName',
-  profileImageUrl: 'profileImageUrl',
-  businessName: 'businessName',
-  businessNumber: 'businessNumber',
-  businessAddress: 'businessAddress',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-};
-
 exports.Prisma.ActivityTypeScalarFieldEnum = {
   id: 'id',
   code: 'code',
@@ -201,6 +178,29 @@ exports.Prisma.RefreshTokenScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.CustomerScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  displayName: 'displayName',
+  profileImageUrl: 'profileImageUrl',
+  address: 'address',
+  preferences: 'preferences',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.OwnerScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  displayName: 'displayName',
+  profileImageUrl: 'profileImageUrl',
+  businessName: 'businessName',
+  businessNumber: 'businessNumber',
+  businessAddress: 'businessAddress',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -233,12 +233,12 @@ exports.UserType = exports.$Enums.UserType = {
 
 exports.Prisma.ModelName = {
   User: 'User',
-  Customer: 'Customer',
-  Owner: 'Owner',
   ActivityType: 'ActivityType',
   Activity: 'Activity',
   Token: 'Token',
-  RefreshToken: 'RefreshToken'
+  RefreshToken: 'RefreshToken',
+  Customer: 'Customer',
+  Owner: 'Owner'
 };
 
 /**
